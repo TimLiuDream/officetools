@@ -9,6 +9,7 @@ import (
 	"github.com/russross/blackfriday"
 	"github.com/satori/go.uuid"
 	"github.com/timliudream/officetools/html2word/logger"
+	"github.com/timliudream/officetools/html2word/model"
 	"io/ioutil"
 	"regexp"
 	"strconv"
@@ -93,6 +94,23 @@ func GetRowColByCellKey(cellKey string) (row, col int) {
 	if err != nil {
 		logger.Error.Println(err)
 		return
+	}
+	return
+}
+
+func IsCellInMergeCellScope(cellKey string, mergeCellScopeMap map[string]*model.MergeCellScope) (result bool) {
+	for key, value := range mergeCellScopeMap {
+		row, col := GetRowColByCellKey(key)
+		rowStart := row + value.RowScope.Start
+		rowEnd := row + value.RowScope.End
+		colStart := col + value.ColScope.Start
+		colEnd := col + value.ColScope.End
+
+		cellRow, cellCol := GetRowColByCellKey(cellKey)
+		if cellRow >= rowStart && cellRow <= rowEnd && cellCol >= colStart && cellCol <= colEnd {
+			result = true
+			return
+		}
 	}
 	return
 }

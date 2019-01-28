@@ -1,23 +1,38 @@
 package style
 
-// 合并格子的合并范围
-type MergeCellScope struct {
-	RowScope
-	ColScope
-}
+import (
+	"baliance.com/gooxml/color"
+	"baliance.com/gooxml/measurement"
+	"baliance.com/gooxml/schema/soo/wml"
+	"github.com/timliudream/officetools/html2word/model"
+	"github.com/timliudream/officetools/html2word/utils"
+)
 
-// 行合并范围
-type RowScope struct {
-	Start int
-	End   int
-}
+func SetTable(rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeCellScope) error {
+	table := Doc.AddTable()
+	table.Properties().SetWidthPercent(100)
+	borders := table.Properties().Borders()
+	borders.SetAll(wml.ST_BorderSingle, color.Auto, 2*measurement.Point)
 
-// 列合并范围
-type ColScope struct {
-	Start int
-	End   int
-}
-
-func SetTable(cellMap map[string]string, mergeCellScopeMap map[string]*MergeCellScope) error {
+	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
+		row := table.AddRow()
+		for colIndex := 0; colIndex < colCount; colIndex++ {
+			cellKey := utils.GetCellKey(rowIndex, colIndex)
+			mergeCellScope, ok := mergeCellScopeMap[cellKey]
+			if !ok {
+				//cellRun := row.AddCell().AddParagraph().AddRun()
+				//cellRun.AddText(cellMap[cellKey])
+			} else {
+				//rowStart := mergeCellScope.RowScope.Start
+				//rowEnd := mergeCellScope.RowScope.End
+				colStart := mergeCellScope.ColScope.Start
+				colEnd := mergeCellScope.ColScope.End
+				cell := row.AddCell()
+				cell.Properties().SetColumnSpan(colEnd - colStart + 1)
+				run := cell.AddParagraph().AddRun()
+				run.AddText(mergeCellScope.Value)
+			}
+		}
+	}
 	return nil
 }

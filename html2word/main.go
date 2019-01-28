@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/timliudream/officetools/html2word/logger"
+	"github.com/timliudream/officetools/html2word/model"
 	"github.com/timliudream/officetools/html2word/style"
 	"github.com/timliudream/officetools/html2word/utils"
 	"golang.org/x/net/html"
@@ -14,9 +15,6 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 )
-
-var cellMap = make(map[string]string)
-var mergeCellScopeMap = make(map[string]*style.MergeCellScope)
 
 func main() {
 	sourcePath := "test2.html"
@@ -133,8 +131,8 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 				})
 			}
 		} else if tag == "table" {
-			parseTable(node, s)
-			err := style.SetTable(cellMap, mergeCellScopeMap)
+			rowCount, colCount, mergeCellScopeMap := parseTable(node, s)
+			err := style.SetTable(rowCount, colCount, mergeCellScopeMap)
 			if err != nil {
 				logger.Error.Println(err)
 				return
@@ -162,14 +160,24 @@ func parseImg(node *html.Node) {
 	}
 }
 
-func parseTable(node *html.Node, s *goquery.Selection) {
-	tableRowSelection := s.Find("table tbody tr")
-	tableRowSelection.Each(func(i int, selection *goquery.Selection) {
-		parseTableRow(i, selection)
-	})
+func parseTable(node *html.Node, s *goquery.Selection) (rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeCellScope) {
+	mergeCellScopeMap = make(map[string]*model.MergeCellScope)
+
+	tableRowSelection := s.Find("tbody tr")
+	if tableRowSelection.Nodes != nil {
+		rowCount = len(tableRowSelection.Nodes)
+		colCount = 0
+		tableRowSelection.Each(func(i int, selection *goquery.Selection) {
+			cc := parseTableRow(i, selection, mergeCellScopeMap)
+			if cc > colCount {
+				colCount = cc
+			}
+		})
+	}
+	return
 }
 
-func parseTableRow(rowIndex int, s *goquery.Selection) {
+func parseTableRow(rowIndex int, s *goquery.Selection, mergeCellScopeMap map[string]*model.MergeCellScope) (colCount int) {
 	tableColSeletion := s.Find("td")
 	cellMergeCount := 0
 	for colIndex, node := range tableColSeletion.Nodes {
@@ -205,17 +213,21 @@ func parseTableRow(rowIndex int, s *goquery.Selection) {
 		if rowSpan != 0 && colSpan == 0 {
 			for ri := 0; ri < rowSpan; ri++ {
 				cellKey := utils.GetCellKey(rowIndex+ri, colIndex+cellMergeCount)
-				cellMap[cellKey] = node.FirstChild.Data
 				if rowIndex != rowIndex+rowSpan-1 {
-					mergeCellScopeMap[cellKey] = &style.MergeCellScope{RowScope: style.RowScope{Start: rowIndex, End: rowIndex + rowSpan - 1}}
+					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
+						mergeCellScopeMap[cellKey] = &model.MergeCellScope{RowScope: model.RowScope{Start: rowIndex, End: rowIndex + rowSpan - 1}}
+						cellMap[cellKey] = node.FirstChild.Data
+					}
 				}
 			}
 		} else if rowSpan == 0 && colSpan != 0 {
 			for ci := 0; ci < colSpan; ci++ {
 				cellKey := utils.GetCellKey(rowIndex, colIndex+ci+cellMergeCount)
-				cellMap[cellKey] = node.FirstChild.Data
 				if colIndex != colSpan-1 {
-					mergeCellScopeMap[cellKey] = &style.MergeCellScope{ColScope: style.ColScope{Start: colIndex, End: colIndex + colSpan - 1}}
+					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
+						mergeCellScopeMap[cellKey] = &model.MergeCellScope{ColScope: model.ColScope{Start: colIndex, End: colIndex + colSpan - 1}}
+						cellMap[cellKey] = node.FirstChild.Data
+					}
 				}
 			}
 			cellMergeCount += colSpan - 1
@@ -224,19 +236,23 @@ func parseTableRow(rowIndex int, s *goquery.Selection) {
 			for ri := 0; ri < rowSpan; ri++ {
 				for ci := 0; ci < colSpan; ci++ {
 					cellKey := utils.GetCellKey(rowIndex+ri, colIndex+ci+cellMergeCount)
-					cellMap[cellKey] = node.FirstChild.Data
-					var rs style.RowScope
-					var cs style.ColScope
-					if rowIndex != rowIndex+rowSpan-1 {
-						rs = style.RowScope{Start: rowIndex, End: rowIndex + rowSpan - 1}
+					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
+						var rs model.RowScope
+						var cs model.ColScope
+						if rowIndex != rowIndex+rowSpan-1 {
+							rs = model.RowScope{Start: rowIndex, End: rowIndex + rowSpan - 1}
+						}
+						if colIndex != colSpan-1 {
+							cs = model.ColScope{Start: colIndex, End: colIndex + colSpan - 1}
+						}
+						mergeCellScopeMap[cellKey] = &model.MergeCellScope{RowScope: rs, ColScope: cs}
+						cellMap[cellKey] = node.FirstChild.Data
 					}
-					if colIndex != colSpan-1 {
-						cs = style.ColScope{Start: colIndex, End: colIndex + colSpan - 1}
-					}
-					mergeCellScopeMap[cellKey] = &style.MergeCellScope{RowScope: rs, ColScope: cs}
 				}
 			}
 			cellMergeCount += colSpan - 1
 		}
 	}
+	colCount = cellMergeCount + len(tableColSeletion.Nodes)
+	return
 }
