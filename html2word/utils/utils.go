@@ -8,9 +8,10 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/russross/blackfriday"
 	"github.com/satori/go.uuid"
+	"github.com/timliudream/officetools/html2word/logger"
 	"io/ioutil"
-	"log"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -18,13 +19,15 @@ import (
 func Base2img(base64Str string) (imgPath string) {
 	UUID, err := uuid.NewV4()
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error.Println(err)
+		return
 	}
 	imgPath = fmt.Sprintf("./html2word/image/%s", UUID.String()+".jpg")
 	ddd, _ := base64.RawStdEncoding.DecodeString(base64Str)
 	err = ioutil.WriteFile(imgPath, ddd, 0666)
 	if err != nil {
-		log.Fatalln(err)
+		logger.Error.Println(err)
+		return
 	}
 	return
 }
@@ -69,4 +72,27 @@ func ConvertMarkdownToHTML(input string) (error, string) {
 	})
 	html, _ := doc.Html()
 	return nil, html
+}
+
+// 计算表格的行列
+func GetCellKey(rowIndex, colIndex int) string {
+	return strconv.Itoa(rowIndex) + "," + strconv.Itoa(colIndex)
+}
+
+// 将格子的key分解成行列索引
+func GetRowColByCellKey(cellKey string) (row, col int) {
+	rowColCouple := strings.Split(cellKey, ",")
+	rowStr := rowColCouple[0]
+	colStr := rowColCouple[1]
+	row, err := strconv.Atoi(rowStr)
+	if err != nil {
+		logger.Error.Println(err)
+		return
+	}
+	col, err = strconv.Atoi(colStr)
+	if err != nil {
+		logger.Error.Println(err)
+		return
+	}
+	return
 }

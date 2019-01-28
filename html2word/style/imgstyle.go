@@ -3,22 +3,26 @@ package style
 import (
 	"baliance.com/gooxml/common"
 	"baliance.com/gooxml/measurement"
+	"github.com/timliudream/officetools/html2word/logger"
 	"math"
 )
 
 func SetImage(imgPath string) error {
 	img, err := common.ImageFromFile(imgPath)
 	if err != nil {
+		logger.Error.Println(err)
 		return err
 	}
 	imgRef, err := Doc.AddImage(img)
 	if err != nil {
+		logger.Error.Println(err)
 		return err
 	}
 	paragraph := Doc.AddParagraph()
 	run := paragraph.AddRun()
 	inline, err := run.AddDrawingInline(imgRef)
 	if err != nil {
+		logger.Error.Println(err)
 		return err
 	}
 	realX, realY := calculateRatioFit(img.Size.X, img.Size.Y)
