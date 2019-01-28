@@ -101,10 +101,10 @@ func GetRowColByCellKey(cellKey string) (row, col int) {
 func IsCellInMergeCellScope(cellKey string, mergeCellScopeMap map[string]*model.MergeCellScope) (result bool) {
 	for key, value := range mergeCellScopeMap {
 		row, col := GetRowColByCellKey(key)
-		rowStart := row + value.RowScope.Start
-		rowEnd := row + value.RowScope.End
-		colStart := col + value.ColScope.Start
-		colEnd := col + value.ColScope.End
+		rowStart := row
+		rowEnd := row + value.VMerge
+		colStart := col
+		colEnd := col + value.HMerge
 
 		cellRow, cellCol := GetRowColByCellKey(cellKey)
 		if cellRow >= rowStart && cellRow <= rowEnd && cellCol >= colStart && cellCol <= colEnd {

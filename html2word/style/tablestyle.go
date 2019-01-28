@@ -15,22 +15,22 @@ func SetTable(rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeC
 	borders.SetAll(wml.ST_BorderSingle, color.Auto, 2*measurement.Point)
 
 	for rowIndex := 0; rowIndex < rowCount; rowIndex++ {
-		row := table.AddRow()
+		//row := table.AddRow()
 		for colIndex := 0; colIndex < colCount; colIndex++ {
 			cellKey := utils.GetCellKey(rowIndex, colIndex)
-			mergeCellScope, ok := mergeCellScopeMap[cellKey]
+			_, ok := mergeCellScopeMap[cellKey]
 			if !ok {
 				//cellRun := row.AddCell().AddParagraph().AddRun()
 				//cellRun.AddText(cellMap[cellKey])
 			} else {
 				//rowStart := mergeCellScope.RowScope.Start
 				//rowEnd := mergeCellScope.RowScope.End
-				colStart := mergeCellScope.ColScope.Start
-				colEnd := mergeCellScope.ColScope.End
-				cell := row.AddCell()
-				cell.Properties().SetColumnSpan(colEnd - colStart + 1)
-				run := cell.AddParagraph().AddRun()
-				run.AddText(mergeCellScope.Value)
+				//colStart := mergeCellScope.ColScope.Start
+				//colEnd := mergeCellScope.ColScope.End
+				//cell := row.AddCell()
+				//cell.Properties().SetColumnSpan(colEnd - colStart + 1)
+				//run := cell.AddParagraph().AddRun()
+				//run.AddText(mergeCellScope.Value)
 			}
 		}
 	}
