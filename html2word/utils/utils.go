@@ -5,18 +5,19 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/russross/blackfriday"
-	"github.com/satori/go.uuid"
-	"github.com/timliudream/officetools/html2word/logger"
-	"github.com/timliudream/officetools/html2word/model"
 	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/russross/blackfriday"
+	uuid "github.com/satori/go.uuid"
+	"github.com/timliudream/officetools/html2word/logger"
+	"github.com/timliudream/officetools/html2word/model"
 )
 
-// base64字符串转图片并保存
+// Base2img base64字符串转图片并保存
 func Base2img(base64Str string) (imgPath string) {
 	UUID, err := uuid.NewV4()
 	if err != nil {
@@ -33,6 +34,7 @@ func Base2img(base64Str string) (imgPath string) {
 	return
 }
 
+// StripMime 取出base64字符串中图片有效字符串
 func StripMime(combined string) (string, error) {
 	re := regexp.MustCompile("data:(.*);base64,(.*)")
 	parts := re.FindStringSubmatch(combined)
@@ -45,7 +47,8 @@ func StripMime(combined string) (string, error) {
 	return data, nil
 }
 
-func ConvertMarkdownToHTML(input string) (error, string) {
+// ConvertMarkdownToHTML 将markdown转换成html
+func ConvertMarkdownToHTML(input string) (string, error) {
 	var renderer blackfriday.Renderer
 	extensions := 0
 	extensions |= blackfriday.EXTENSION_NO_INTRA_EMPHASIS
@@ -63,7 +66,7 @@ func ConvertMarkdownToHTML(input string) (error, string) {
 	output := blackfriday.Markdown([]byte(input), renderer, extensions)
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(output))
 	if err != nil {
-		return err, ""
+		return "", err
 	}
 	doc.Find("body").Each(func(i int, selection *goquery.Selection) {
 		ret, _ := selection.Html()
@@ -72,15 +75,15 @@ func ConvertMarkdownToHTML(input string) (error, string) {
 		selection.SetHtml(ret)
 	})
 	html, _ := doc.Html()
-	return nil, html
+	return html, nil
 }
 
-// 计算表格的行列
+// GetCellKey 根据行列索引给出对应的cellMap的key
 func GetCellKey(rowIndex, colIndex int) string {
 	return strconv.Itoa(rowIndex) + "," + strconv.Itoa(colIndex)
 }
 
-// 将格子的key分解成行列索引
+// GetRowColByCellKey 将cellMap的key分解成行列索引
 func GetRowColByCellKey(cellKey string) (row, col int) {
 	rowColCouple := strings.Split(cellKey, ",")
 	rowStr := rowColCouple[0]
@@ -98,8 +101,9 @@ func GetRowColByCellKey(cellKey string) (row, col int) {
 	return
 }
 
-func IsCellInMergeCellScope(cellKey string, mergeCellScopeMap map[string]*model.MergeCellScope) (result bool) {
-	for key, value := range mergeCellScopeMap {
+// IsCellInMergeCellScope 判断单元格是不是在合并的map中已经包含了
+func IsCellInMergeCellScope(cellKey string, tableCellMap map[string]*model.TableCell) (result bool) {
+	for key, value := range tableCellMap {
 		row, col := GetRowColByCellKey(key)
 		rowStart := row
 		rowEnd := row + value.VMerge

@@ -3,16 +3,20 @@ package logger
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"time"
-	"log"
 )
 
 var (
-	Trace   *log.Logger
-	Info    *log.Logger
+	// Trace 堆栈信息
+	Trace *log.Logger
+	// Info 提示信息
+	Info *log.Logger
+	// Warning 警告信息
 	Warning *log.Logger
-	Error   *log.Logger
+	// Error 错误信息
+	Error *log.Logger
 )
 
 func init() {

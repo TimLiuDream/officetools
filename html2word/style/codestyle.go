@@ -1,11 +1,13 @@
 package style
 
 import (
+	"strings"
+
 	"baliance.com/gooxml/color"
 	"baliance.com/gooxml/schema/soo/wml"
-	"strings"
 )
 
+// SetCode 往word中写入代码模块
 func SetCode(code string) {
 	paragraph := Doc.AddParagraph()
 	run := paragraph.AddRun()

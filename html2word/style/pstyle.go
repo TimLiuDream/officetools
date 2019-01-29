@@ -6,6 +6,7 @@ import (
 	"baliance.com/gooxml/schema/soo/wml"
 )
 
+// SetHyperlink 往word写超链接
 func SetHyperlink(link string) {
 	hlStyle := Doc.Styles.AddStyle("Hyperlink", wml.ST_StyleTypeCharacter, false)
 	hlStyle.SetName("Hyperlink")
@@ -24,6 +25,7 @@ func SetHyperlink(link string) {
 	run.AddBreak()
 }
 
+// SetP 往word写段落
 func SetP(text string) {
 	paragraph := Doc.AddParagraph()
 	run := paragraph.AddRun()

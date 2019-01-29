@@ -2,16 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/timliudream/officetools/html2word/logger"
-	"github.com/timliudream/officetools/html2word/model"
-	"github.com/timliudream/officetools/html2word/style"
-	"github.com/timliudream/officetools/html2word/utils"
-	"golang.org/x/net/html"
 	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/timliudream/officetools/html2word/logger"
+	"github.com/timliudream/officetools/html2word/model"
+	"github.com/timliudream/officetools/html2word/style"
+	"github.com/timliudream/officetools/html2word/utils"
+	"golang.org/x/net/html"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -19,7 +20,7 @@ import (
 func main() {
 	sourcePath := "test2.html"
 	targetPath := "test.docx"
-	tmpHtmlPath := "htmltmp/tmp.html"
+	tmpHTMLPath := "htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
 	if err != nil {
 		logger.Error.Println(err)
@@ -33,7 +34,7 @@ func main() {
 
 	// 先对文档做markdown和code处理
 	htmlDoc.Find("div[class=ones-marked-card]").Each(func(i int, selection *goquery.Selection) {
-		err, output := utils.ConvertMarkdownToHTML(selection.Text())
+		output, err := utils.ConvertMarkdownToHTML(selection.Text())
 		if err != nil {
 			logger.Error.Println(err)
 			return
@@ -58,14 +59,14 @@ func main() {
 	}
 	content = html.UnescapeString(content)
 
-	err = ioutil.WriteFile(tmpHtmlPath, []byte(content), 0644)
+	err = ioutil.WriteFile(tmpHTMLPath, []byte(content), 0644)
 	if err != nil {
 		logger.Error.Println(err)
 		return
 	}
 
 	// 正式处理
-	file, err = os.Open(tmpHtmlPath)
+	file, err = os.Open(tmpHTMLPath)
 	if err != nil {
 		logger.Error.Println(err)
 		return
@@ -131,8 +132,8 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 				})
 			}
 		} else if tag == "table" {
-			rowCount, colCount, mergeCellScopeMap := parseTable(s)
-			err := style.SetTable(rowCount, colCount, mergeCellScopeMap)
+			rowCount, colCount, cellMap := parseTable(s)
+			err := style.SetTable(rowCount, colCount, cellMap)
 			if err != nil {
 				logger.Error.Println(err)
 				return
@@ -160,15 +161,15 @@ func parseImg(node *html.Node) {
 	}
 }
 
-func parseTable(s *goquery.Selection) (rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeCellScope) {
-	mergeCellScopeMap = make(map[string]*model.MergeCellScope)
+func parseTable(s *goquery.Selection) (rowCount, colCount int, tableCellMap map[string]*model.TableCell) {
+	tableCellMap = make(map[string]*model.TableCell)
 	cellMap := make(map[string]string)
 	tableRowSelection := s.Find("tbody tr")
 	if tableRowSelection.Nodes != nil {
 		rowCount = len(tableRowSelection.Nodes)
 		colCount = 0
 		tableRowSelection.Each(func(i int, selection *goquery.Selection) {
-			cc := parseTableRow(i, selection, cellMap, mergeCellScopeMap)
+			cc := parseTableRow(i, selection, cellMap, tableCellMap)
 			if cc > colCount {
 				colCount = cc
 			}
@@ -177,7 +178,7 @@ func parseTable(s *goquery.Selection) (rowCount, colCount int, mergeCellScopeMap
 	return
 }
 
-func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string, mergeCellScopeMap map[string]*model.MergeCellScope) (colCount int) {
+func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string, tableCellMap map[string]*model.TableCell) (colCount int) {
 	tableColSeletion := s.Find("td")
 	cellMergeCount := 0
 	for colIndex, node := range tableColSeletion.Nodes {
@@ -208,7 +209,7 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				_, ok := cellMap[cellKey]
 				if !ok {
 					cellMap[cellKey] = value
-					mergeCellScopeMap[cellKey] = &model.MergeCellScope{Value: value}
+					tableCellMap[cellKey] = &model.TableCell{Value: value}
 					break
 				}
 			}
@@ -219,8 +220,8 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				cellKey := utils.GetCellKey(rowIndex+ri, colIndex+cellMergeCount)
 				cellMap[cellKey] = value
 				if rowIndex != rowIndex+rowSpan-1 {
-					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
-						mergeCellScopeMap[cellKey] = &model.MergeCellScope{VMerge: rowSpan, Value: value}
+					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
+						tableCellMap[cellKey] = &model.TableCell{VMerge: rowSpan, Value: value}
 					}
 				}
 			}
@@ -229,8 +230,8 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				cellKey := utils.GetCellKey(rowIndex, colIndex+ci+cellMergeCount)
 				cellMap[cellKey] = value
 				if colIndex != colSpan-1 {
-					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
-						mergeCellScopeMap[cellKey] = &model.MergeCellScope{HMerge: colSpan, Value: value}
+					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
+						tableCellMap[cellKey] = &model.TableCell{HMerge: colSpan, Value: value}
 					}
 				}
 			}
@@ -241,8 +242,8 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				for ci := 0; ci < colSpan; ci++ {
 					cellKey := utils.GetCellKey(rowIndex+ri, colIndex+ci+cellMergeCount)
 					cellMap[cellKey] = value
-					if !utils.IsCellInMergeCellScope(cellKey, mergeCellScopeMap) {
-						mergeCellScopeMap[cellKey] = &model.MergeCellScope{VMerge: rowSpan, HMerge: colSpan, Value: value}
+					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
+						tableCellMap[cellKey] = &model.TableCell{VMerge: rowSpan, HMerge: colSpan, Value: value}
 					}
 				}
 			}

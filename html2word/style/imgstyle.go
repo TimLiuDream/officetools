@@ -1,12 +1,16 @@
 package style
 
 import (
+	"math"
+
 	"baliance.com/gooxml/common"
 	"baliance.com/gooxml/measurement"
 	"github.com/timliudream/officetools/html2word/logger"
-	"math"
 )
 
+// TODO 需要处理大图片的情况
+
+// SetImage 往word写入图片
 func SetImage(imgPath string) error {
 	img, err := common.ImageFromFile(imgPath)
 	if err != nil {

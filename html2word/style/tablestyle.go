@@ -8,7 +8,8 @@ import (
 	"github.com/timliudream/officetools/html2word/utils"
 )
 
-func SetTable(rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeCellScope) error {
+// SetTable 往word写表格
+func SetTable(rowCount, colCount int, tableCellMap map[string]*model.TableCell) error {
 	table := Doc.AddTable()
 	table.Properties().SetWidthPercent(100)
 	borders := table.Properties().Borders()
@@ -18,7 +19,7 @@ func SetTable(rowCount, colCount int, mergeCellScopeMap map[string]*model.MergeC
 		//row := table.AddRow()
 		for colIndex := 0; colIndex < colCount; colIndex++ {
 			cellKey := utils.GetCellKey(rowIndex, colIndex)
-			_, ok := mergeCellScopeMap[cellKey]
+			_, ok := tableCellMap[cellKey]
 			if !ok {
 				//cellRun := row.AddCell().AddParagraph().AddRun()
 				//cellRun.AddText(cellMap[cellKey])

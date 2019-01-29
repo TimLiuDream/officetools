@@ -4,6 +4,7 @@ import (
 	"baliance.com/gooxml/measurement"
 )
 
+// SetH 往word中写入标题
 func SetH(text string, tag string) {
 	var size measurement.Distance
 	switch tag {
