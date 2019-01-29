@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"regexp"
 	"strconv"
 	"strings"
@@ -13,7 +14,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/russross/blackfriday"
 	uuid "github.com/satori/go.uuid"
-	"github.com/timliudream/officetools/html2word/logger"
 	"github.com/timliudream/officetools/html2word/model"
 )
 
@@ -21,14 +21,14 @@ import (
 func Base2img(base64Str string) (imgPath string) {
 	UUID, err := uuid.NewV4()
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	imgPath = fmt.Sprintf("./html2word/image/%s", UUID.String()+".jpg")
 	ddd, _ := base64.RawStdEncoding.DecodeString(base64Str)
 	err = ioutil.WriteFile(imgPath, ddd, 0666)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	return
@@ -90,12 +90,12 @@ func GetRowColByCellKey(cellKey string) (row, col int) {
 	colStr := rowColCouple[1]
 	row, err := strconv.Atoi(rowStr)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	col, err = strconv.Atoi(colStr)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	return

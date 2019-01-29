@@ -1,14 +1,13 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/timliudream/officetools/html2word/logger"
 	"github.com/timliudream/officetools/html2word/model"
 	"github.com/timliudream/officetools/html2word/style"
 	"github.com/timliudream/officetools/html2word/utils"
@@ -17,18 +16,20 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
+var cells []*model.TableCell
+
 func main() {
 	sourcePath := "test2.html"
 	targetPath := "test.docx"
 	tmpHTMLPath := "htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	htmlDoc, err := goquery.NewDocumentFromReader(file)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 
@@ -36,14 +37,13 @@ func main() {
 	htmlDoc.Find("div[class=ones-marked-card]").Each(func(i int, selection *goquery.Selection) {
 		output, err := utils.ConvertMarkdownToHTML(selection.Text())
 		if err != nil {
-			logger.Error.Println(err)
+			log.Fatalln(err)
 			return
 		}
 		// 不知道为什么不做截取操作的话，是取不到body的内容的
 		outputs := strings.Split(output, "body")
 		realOutput := strings.TrimLeft(outputs[1], ">")
 		realOutput = strings.TrimRight(realOutput, "</")
-		fmt.Println(realOutput)
 		selection.SetText(realOutput)
 	})
 	htmlDoc.Find("div[class=ones-code-card]").Each(func(i int, selection *goquery.Selection) {
@@ -54,26 +54,26 @@ func main() {
 	})
 	content, err := htmlDoc.Html()
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	content = html.UnescapeString(content)
 
 	err = ioutil.WriteFile(tmpHTMLPath, []byte(content), 0644)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 
 	// 正式处理
 	file, err = os.Open(tmpHTMLPath)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 	htmlDoc, err = goquery.NewDocumentFromReader(file)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 
@@ -86,7 +86,7 @@ func main() {
 
 	err = style.Doc.SaveToFile(targetPath)
 	if err != nil {
-		logger.Error.Println(err)
+		log.Fatalln(err)
 		return
 	}
 }
@@ -133,9 +133,9 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 			}
 		} else if tag == "table" {
 			rowCount, colCount, cellMap := parseTable(s)
-			err := style.SetTable(rowCount, colCount, cellMap)
+			err := style.SetTable(rowCount, colCount, cellMap, cells)
 			if err != nil {
-				logger.Error.Println(err)
+				log.Fatalln(err)
 				return
 			}
 		}
@@ -149,19 +149,20 @@ func parseImg(node *html.Node) {
 		base64Str := strings.Replace(attr.Val, "\n", "", -1)
 		base64Str, err := utils.StripMime(base64Str)
 		if err != nil {
-			logger.Error.Println(err)
+			log.Fatalln(err)
 			return
 		}
 		imgPath := utils.Base2img(base64Str)
 		err = style.SetImage(imgPath)
 		if err != nil {
-			logger.Error.Println(err)
+			log.Fatalln(err)
 			return
 		}
 	}
 }
 
 func parseTable(s *goquery.Selection) (rowCount, colCount int, tableCellMap map[string]*model.TableCell) {
+	cells = make([]*model.TableCell, 0)
 	tableCellMap = make(map[string]*model.TableCell)
 	cellMap := make(map[string]string)
 	tableRowSelection := s.Find("tbody tr")
@@ -188,13 +189,19 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 			if attr.Key == "colspan" {
 				col, err := strconv.Atoi(attr.Val)
 				if err != nil {
-					logger.Error.Println(err)
+					log.Fatalln(err)
+				}
+				if col == 1 {
+					continue
 				}
 				colSpan = col
 			} else if attr.Key == "rowspan" {
 				row, err := strconv.Atoi(attr.Val)
 				if err != nil {
-					logger.Error.Println(err)
+					log.Fatalln(err)
+				}
+				if row == 1 {
+					continue
 				}
 				rowSpan = row
 			}
@@ -209,7 +216,9 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				_, ok := cellMap[cellKey]
 				if !ok {
 					cellMap[cellKey] = value
-					tableCellMap[cellKey] = &model.TableCell{Value: value}
+					cell := &model.TableCell{RowIndex: rowIndex, ColIndex: colIndex + ci, Value: value}
+					tableCellMap[cellKey] = cell
+					cells = append(cells, cell)
 					break
 				}
 			}
@@ -221,7 +230,9 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				cellMap[cellKey] = value
 				if rowIndex != rowIndex+rowSpan-1 {
 					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						tableCellMap[cellKey] = &model.TableCell{VMerge: rowSpan, Value: value}
+						cell := &model.TableCell{RowIndex: rowIndex + ri, ColIndex: colIndex + cellMergeCount, VMerge: rowSpan, Value: value}
+						tableCellMap[cellKey] = cell
+						cells = append(cells, cell)
 					}
 				}
 			}
@@ -231,7 +242,9 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 				cellMap[cellKey] = value
 				if colIndex != colSpan-1 {
 					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						tableCellMap[cellKey] = &model.TableCell{HMerge: colSpan, Value: value}
+						cell := &model.TableCell{RowIndex: rowIndex, ColIndex: colIndex + ci + cellMergeCount, HMerge: colSpan, Value: value}
+						tableCellMap[cellKey] = cell
+						cells = append(cells, cell)
 					}
 				}
 			}
@@ -243,7 +256,9 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 					cellKey := utils.GetCellKey(rowIndex+ri, colIndex+ci+cellMergeCount)
 					cellMap[cellKey] = value
 					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						tableCellMap[cellKey] = &model.TableCell{VMerge: rowSpan, HMerge: colSpan, Value: value}
+						cell := &model.TableCell{RowIndex: rowIndex + ri, ColIndex: colIndex + ci + cellMergeCount, VMerge: rowSpan, HMerge: colSpan, Value: value}
+						tableCellMap[cellKey] = cell
+						cells = append(cells, cell)
 					}
 				}
 			}
