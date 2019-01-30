@@ -19,7 +19,7 @@ import (
 var cells []*model.TableCell
 
 func main() {
-	sourcePath := "test2.html"
+	sourcePath := "htmltestset/多种合并方式的表格.html"
 	targetPath := "test.docx"
 	tmpHTMLPath := "htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
