@@ -1,14 +1,14 @@
 package main
 
 import (
+	"fmt"
+	"github.com/timliudream/officetools/html2word/model"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"strconv"
 	"strings"
 
-	"github.com/timliudream/officetools/html2word/model"
 	"github.com/timliudream/officetools/html2word/style"
 	"github.com/timliudream/officetools/html2word/utils"
 	"golang.org/x/net/html"
@@ -16,10 +16,8 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-var cells []*model.TableCell
-
 func main() {
-	sourcePath := "htmltestset/多种合并方式的表格.html"
+	sourcePath := "htmltestset/多种合并方式的表格1.html"
 	targetPath := "test.docx"
 	tmpHTMLPath := "htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
@@ -132,12 +130,12 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 				})
 			}
 		} else if tag == "table" {
-			rowCount, colCount, cellMap := parseTable(s)
-			err := style.SetTable(rowCount, colCount, cellMap, cells)
-			if err != nil {
-				log.Fatalln(err)
-				return
-			}
+			parseTable(s)
+			//err := style.SetTable(rowCount, colCount, cellMap, cells)
+			//if err != nil {
+			//	log.Fatalln(err)
+			//	return
+			//}
 		}
 	}
 }
@@ -161,30 +159,72 @@ func parseImg(node *html.Node) {
 	}
 }
 
-func parseTable(s *goquery.Selection) (rowCount, colCount int, tableCellMap map[string]*model.TableCell) {
-	cells = make([]*model.TableCell, 0)
-	tableCellMap = make(map[string]*model.TableCell)
-	cellMap := make(map[string]string)
-	tableRowSelection := s.Find("tbody tr")
-	if tableRowSelection.Nodes != nil {
-		rowCount = len(tableRowSelection.Nodes)
-		colCount = 0
-		tableRowSelection.Each(func(i int, selection *goquery.Selection) {
-			cc := parseTableRow(i, selection, cellMap, tableCellMap)
-			if cc > colCount {
-				colCount = cc
+func parseTable(s *goquery.Selection) {
+	// 取行标题
+	rowTitles := parseTableRowTitle(s)
+
+	// 取列标题
+	colTitles := parseTableColTitle(s)
+	fmt.Println(rowTitles)
+	fmt.Println(colTitles)
+
+	parseTableBody(s)
+	return
+}
+
+func parseTableRowTitle(s *goquery.Selection) (rowTitles []*model.TableRowTitle) {
+	rowTitles = make([]*model.TableRowTitle, 0)
+	rowTitleNodes := s.Find("thead tr th").Nodes
+	if len(rowTitleNodes) != 0 {
+		for index, node := range rowTitleNodes {
+			if node.FirstChild != nil {
+				rowTitle := &model.TableRowTitle{ColIndex: index, Title: node.FirstChild.Data}
+				rowTitles = append(rowTitles, rowTitle)
+			} else {
+				rowTitle := &model.TableRowTitle{ColIndex: index, Title: ""}
+				rowTitles = append(rowTitles, rowTitle)
 			}
-		})
+		}
 	}
 	return
 }
 
-func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string, tableCellMap map[string]*model.TableCell) (colCount int) {
-	tableColSeletion := s.Find("td")
-	cellMergeCount := 0
-	for colIndex, node := range tableColSeletion.Nodes {
-		rowSpan := 0
+func parseTableColTitle(s *goquery.Selection) (colTitles []*model.TableColTitle) {
+	colTitles = make([]*model.TableColTitle, 0)
+	colTitleNodes := s.Find("tbody tr th").Nodes
+	if len(colTitleNodes) != 0 {
+		for index, node := range colTitleNodes {
+			if node.FirstChild != nil {
+				colTitle := &model.TableColTitle{RowIndex: index, Title: node.FirstChild.Data}
+				colTitles = append(colTitles, colTitle)
+			} else {
+				colTitle := &model.TableColTitle{RowIndex: index, Title: ""}
+				colTitles = append(colTitles, colTitle)
+			}
+		}
+	}
+	return
+}
+
+func parseTableBody(s *goquery.Selection) (tableCells []*model.TableCell) {
+	tableCells = make([]*model.TableCell, 0)
+	// 先遍历行
+	rows := s.Find("tbody tr")
+	rows.Each(func(rowIndex int, selection *goquery.Selection) {
+		// 遍历行中的列
+		rowCells := parseTableRow(rowIndex, selection)
+		tableCells = append(tableCells, rowCells...)
+	})
+	return
+}
+
+func parseTableRow(rowIndex int, s *goquery.Selection) (rowCells []*model.TableCell) {
+	rowCells = make([]*model.TableCell, 0)
+
+	cellNodes := s.Find("td").Nodes
+	for colIndex, node := range cellNodes {
 		colSpan := 0
+		rowSpan := 0
 		for _, attr := range node.Attr {
 			if attr.Key == "colspan" {
 				col, err := strconv.Atoi(attr.Val)
@@ -207,64 +247,7 @@ func parseTableRow(rowIndex int, s *goquery.Selection, cellMap map[string]string
 			}
 		}
 
-		value := node.FirstChild.Data
-
-		if rowSpan == 0 && colSpan == 0 {
-			// 先要确定这个格子的索引
-			for ci := 0; ci < math.MaxInt8; ci++ {
-				cellKey := utils.GetCellKey(rowIndex, colIndex+ci)
-				_, ok := cellMap[cellKey]
-				if !ok {
-					cellMap[cellKey] = value
-					cell := &model.TableCell{RowIndex: rowIndex, ColIndex: colIndex + ci, Value: value}
-					tableCellMap[cellKey] = cell
-					cells = append(cells, cell)
-					break
-				}
-			}
-		}
-
-		if rowSpan != 0 && colSpan == 0 {
-			for ri := 0; ri < rowSpan; ri++ {
-				cellKey := utils.GetCellKey(rowIndex+ri, colIndex+cellMergeCount)
-				cellMap[cellKey] = value
-				if rowIndex != rowIndex+rowSpan-1 {
-					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						cell := &model.TableCell{RowIndex: rowIndex + ri, ColIndex: colIndex + cellMergeCount, VMerge: rowSpan, Value: value}
-						tableCellMap[cellKey] = cell
-						cells = append(cells, cell)
-					}
-				}
-			}
-		} else if rowSpan == 0 && colSpan != 0 {
-			for ci := 0; ci < colSpan; ci++ {
-				cellKey := utils.GetCellKey(rowIndex, colIndex+ci+cellMergeCount)
-				cellMap[cellKey] = value
-				if colIndex != colSpan-1 {
-					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						cell := &model.TableCell{RowIndex: rowIndex, ColIndex: colIndex + ci + cellMergeCount, HMerge: colSpan, Value: value}
-						tableCellMap[cellKey] = cell
-						cells = append(cells, cell)
-					}
-				}
-			}
-			cellMergeCount += colSpan - 1
-		} else if rowSpan != 0 && colSpan != 0 {
-			// 计算每个格子的值
-			for ri := 0; ri < rowSpan; ri++ {
-				for ci := 0; ci < colSpan; ci++ {
-					cellKey := utils.GetCellKey(rowIndex+ri, colIndex+ci+cellMergeCount)
-					cellMap[cellKey] = value
-					if !utils.IsCellInMergeCellScope(cellKey, tableCellMap) {
-						cell := &model.TableCell{RowIndex: rowIndex + ri, ColIndex: colIndex + ci + cellMergeCount, VMerge: rowSpan, HMerge: colSpan, Value: value}
-						tableCellMap[cellKey] = cell
-						cells = append(cells, cell)
-					}
-				}
-			}
-			cellMergeCount += colSpan - 1
-		}
+		//格子的列索引好难求
 	}
-	colCount = cellMergeCount + len(tableColSeletion.Nodes)
 	return
 }
