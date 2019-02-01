@@ -13,8 +13,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/russross/blackfriday"
-	uuid "github.com/satori/go.uuid"
-	"github.com/timliudream/officetools/html2word/model"
+	"github.com/satori/go.uuid"
 )
 
 // Base2img base64字符串转图片并保存
@@ -102,19 +101,19 @@ func GetRowColByCellKey(cellKey string) (row, col int) {
 }
 
 // IsCellInMergeCellScope 判断单元格是不是在合并的map中已经包含了
-func IsCellInMergeCellScope(cellKey string, tableCellMap map[string]*model.TableCell) (result bool) {
-	for key, value := range tableCellMap {
-		row, col := GetRowColByCellKey(key)
-		rowStart := row
-		rowEnd := row + value.VMerge
-		colStart := col
-		colEnd := col + value.HMerge
-
-		cellRow, cellCol := GetRowColByCellKey(cellKey)
-		if cellRow >= rowStart && cellRow <= rowEnd && cellCol >= colStart && cellCol <= colEnd {
-			result = true
-			return
-		}
-	}
-	return
-}
+//func IsCellInMergeCellScope(cellKey string, tableCellMap map[string]*model.TableCell) (result bool) {
+//	for key, value := range tableCellMap {
+//		row, col := GetRowColByCellKey(key)
+//		rowStart := row
+//		rowEnd := row + value.VMerge
+//		colStart := col
+//		colEnd := col + value.HMerge
+//
+//		cellRow, cellCol := GetRowColByCellKey(cellKey)
+//		if cellRow >= rowStart && cellRow <= rowEnd && cellCol >= colStart && cellCol <= colEnd {
+//			result = true
+//			return
+//		}
+//	}
+//	return
+//}

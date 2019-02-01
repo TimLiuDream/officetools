@@ -206,48 +206,153 @@ func parseTableColTitle(s *goquery.Selection) (colTitles []*model.TableColTitle)
 	return
 }
 
-func parseTableBody(s *goquery.Selection) (tableCells []*model.TableCell) {
-	tableCells = make([]*model.TableCell, 0)
+func parseTableBody(s *goquery.Selection) (tableCells [][]*model.TableCell) {
+	// rowCellMap 用来记录每行有那些格子的索引已经被占用了
+	// key为行索引，[]int是用来记录被占的格子的列索引
+	//rowCellMap := make(map[int][]int)
+
+	// 计算表格的行列数
+	rowCount, colCount := calTableRowColCount(s)
+
+	// 构造一个rowCount * colCount的矩阵，用来表示哪些格子被占用了
+	vTable := buildVirtualTable(rowCount, colCount)
+	fmt.Println(vTable)
+
+	tableCells = make([][]*model.TableCell, 0)
+
+	// 先测试一下看看格子占用情况是否正确
+	setUsedCellsInVTable(s, vTable)
+
 	// 先遍历行
 	rows := s.Find("tbody tr")
 	rows.Each(func(rowIndex int, selection *goquery.Selection) {
 		// 遍历行中的列
-		rowCells := parseTableRow(rowIndex, selection)
-		tableCells = append(tableCells, rowCells...)
+		//rowCells := parseTableRow(rowIndex, selection, rowCellMap)
+		//tableCells = append(tableCells, rowCells)
 	})
 	return
 }
 
-func parseTableRow(rowIndex int, s *goquery.Selection) (rowCells []*model.TableCell) {
-	rowCells = make([]*model.TableCell, 0)
+// 计算表格的行列数
+func calTableRowColCount(s *goquery.Selection) (rowCount, colCount int) {
+	rowSelection := s.Find("tbody tr")
+	rowCount = len(rowSelection.Nodes)
+	rowSelection.Each(func(i int, selection *goquery.Selection) {
+		if i == 0 {
+			cellSelection := selection.Find("td")
+			for _, node := range cellSelection.Nodes {
+				for _, attr := range node.Attr {
+					if attr.Key == "colspan" {
+						col, err := strconv.Atoi(attr.Val)
+						if err != nil {
+							log.Fatalln(err)
+						}
+						if col < 2 {
+							colCount += 1
+						} else {
+							colCount += col
+						}
+					}
+				}
+			}
+		}
+	})
+	return
+}
 
-	cellNodes := s.Find("td").Nodes
-	for colIndex, node := range cellNodes {
-		colSpan := 0
-		rowSpan := 0
-		for _, attr := range node.Attr {
-			if attr.Key == "colspan" {
-				col, err := strconv.Atoi(attr.Val)
-				if err != nil {
-					log.Fatalln(err)
-				}
-				if col == 1 {
-					continue
-				}
+// 构建一个虚拟表格，用来表示那些格子被占用了
+func buildVirtualTable(rowCount, colCount int) (vTable [][]bool) {
+	vTable = make([][]bool, 0)
+	for i := 0; i < rowCount; i++ {
+		rowCell := make([]bool, colCount)
+		vTable = append(vTable, rowCell)
+	}
+	return
+}
+
+// 根据html的表格，去构造一个被占用格子情况的表格
+func setUsedCellsInVTable(s *goquery.Selection, vTable [][]bool) {
+	s.Find("tbody tr").Each(func(rowIndex int, selection *goquery.Selection) {
+		rowCellNodes := selection.Find("td").Nodes
+		for _, cellNode := range rowCellNodes {
+			rowSpan, colSpan := calculateCellNodeSpan(cellNode.Attr)
+
+			rowUsedCell := vTable[rowIndex]
+
+			if rowSpan != 0 && colSpan == 0 { // 仅竖向合并的
+
+			} else if colSpan != 0 && rowSpan == 0 { // 仅横向合并的
+
+			} else if colSpan != 0 && rowSpan != 0 { // 行列合并的
+
+			} else { // 没有合并的
+
+			}
+		}
+	})
+
+}
+
+//func parseTableRow(rowIndex int, s *goquery.Selection, rowCellMap map[int][]int) (rowCells []*model.TableCell) {
+//	rowCells = make([]*model.TableCell, 0)
+//
+//	cellNodes := s.Find("td").Nodes
+//	for colIndex, node := range cellNodes {
+//		colSpan := 0
+//		rowSpan := 0
+//		for _, attr := range node.Attr {
+//			if attr.Key == "colspan" {
+//				col, err := strconv.Atoi(attr.Val)
+//				if err != nil {
+//					log.Fatalln(err)
+//				}
+//				if col == 1 {
+//					continue
+//				}
+//				colSpan = col
+//			} else if attr.Key == "rowspan" {
+//				row, err := strconv.Atoi(attr.Val)
+//				if err != nil {
+//					log.Fatalln(err)
+//				}
+//				if row == 1 {
+//					continue
+//				}
+//				rowSpan = row
+//			}
+//		}
+//
+//		if rowSpan > 1 {
+//
+//		} else if colSpan > 1 {
+//
+//		} else if rowSpan == 0 && colSpan == 0 {
+//
+//		}
+//	}
+//	return
+//}
+
+// 计算格子节点的行列合并数
+func calculateCellNodeSpan(attrs []html.Attribute) (rowSpan, colSpan int) {
+	for _, attr := range attrs {
+		if attr.Key == "colspan" {
+			col, err := strconv.Atoi(attr.Val)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			if col > 1 {
 				colSpan = col
-			} else if attr.Key == "rowspan" {
-				row, err := strconv.Atoi(attr.Val)
-				if err != nil {
-					log.Fatalln(err)
-				}
-				if row == 1 {
-					continue
-				}
+			}
+		} else if attr.Key == "rowspan" {
+			row, err := strconv.Atoi(attr.Val)
+			if err != nil {
+				log.Fatalln(err)
+			}
+			if row > 1 {
 				rowSpan = row
 			}
 		}
-
-		//格子的列索引好难求
 	}
 	return
 }
