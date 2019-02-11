@@ -1,86 +1,64 @@
 package wordstyle
 
 import (
-	"baliance.com/gooxml/document"
+	"baliance.com/gooxml/color"
+	"baliance.com/gooxml/measurement"
+	"baliance.com/gooxml/schema/soo/wml"
+	"github.com/timliudream/officetools/html2word/model"
 )
 
-// SetTable 往word写表格
-//func SetTable(rowCount, colCount int, tableCellMap map[string]*model.TableCell, cells []*model.TableCell) error {
-//	table := Doc.AddTable()
-//	table.Properties().SetWidthPercent(100)
-//	borders := table.Properties().Borders()
-//	borders.SetAll(wml.ST_BorderSingle, color.Auto, 2*measurement.Point)
-//
-//	for _, cell := range cells {
-//		var row document.Row
-//		if cell.RowIndex+1 > len(table.Rows()) {
-//			// 这里需要判断上一行是不是齐了
-//			if cell.RowIndex != 0 {
-//				preRow := table.Rows()[cell.RowIndex-1]
-//				preRowCellCount := calCount(preRow)
-//				if preRowCellCount != colCount {
-//					c := preRow.AddCell()
-//					c.Properties().SetColumnSpan(colCount - preRowCellCount)
-//					c.Properties().SetVerticalMerge(wml.ST_MergeContinue)
-//				}
-//			}
-//			row = table.AddRow()
-//		} else {
-//			row = table.Rows()[cell.RowIndex]
-//		}
-//		if cell.ColIndex > calCount(row) {
-//			colSpanCount := cell.ColIndex - calCount(row)
-//			c := row.AddCell()
-//			c.Properties().SetColumnSpan(colSpanCount)
-//			c.Properties().SetVerticalMerge(wml.ST_MergeContinue)
-//		}
-//		if cell.HMerge == 0 && cell.VMerge == 0 {
-//			c := row.AddCell()
-//			run := c.AddParagraph().AddRun()
-//			run.AddText(cell.Value)
-//		} else if cell.HMerge != 0 && cell.VMerge == 0 {
-//			c := row.AddCell()
-//			c.Properties().SetColumnSpan(cell.HMerge)
-//			run := c.AddParagraph().AddRun()
-//			run.AddText(cell.Value)
-//		} else if cell.HMerge == 0 && cell.VMerge != 0 {
-//			c := row.AddCell()
-//			c.Properties().SetVerticalMerge(wml.ST_MergeRestart)
-//			run := c.AddParagraph().AddRun()
-//			run.AddText(cell.Value)
-//		} else {
-//			c := row.AddCell()
-//			c.Properties().SetColumnSpan(cell.HMerge)
-//			c.Properties().SetVerticalMerge(wml.ST_MergeRestart)
-//			run := c.AddParagraph().AddRun()
-//			run.AddText(cell.Value)
-//		}
-//	}
-//	// 再检查一下最后一行的格子是不是齐了
-//	lastRow := table.Rows()[len(table.Rows())-1]
-//	lastRowCellCount := calCount(lastRow)
-//	if lastRowCellCount != colCount {
-//		c := lastRow.AddCell()
-//		c.Properties().SetColumnSpan(colCount - lastRowCellCount)
-//		c.Properties().SetVerticalMerge(wml.ST_MergeContinue)
-//	}
-//
-//	return nil
-//}
+func SetTable(vTable [][]*model.TableCell) {
+	table := Doc.AddTable()
+	table.Properties().SetWidthPercent(100)
+	borders := table.Properties().Borders()
+	borders.SetAll(wml.ST_BorderSingle, color.Auto, 2*measurement.Point)
 
-// calCount 因前面格子有合并格子而导致列索引对不上的补救方法
-func calCount(row document.Row) (count int) {
-	rowCells := row.Cells()
-	for i := 0; i < len(rowCells); i++ {
-		if rowCells[i].X().TcPr != nil {
-			if rowCells[i].X().TcPr.GridSpan != nil {
-				gridSpanInt64 := rowCells[i].X().TcPr.GridSpan.ValAttr
-				gridSpan := int(gridSpanInt64)
-				count += gridSpan
-				continue
+	for _, rowCell := range vTable {
+		// 新建一行
+		row := table.AddRow()
+		for i := 0; i < len(rowCell); {
+			if rowCell[i].IsVMergeStart == false && rowCell[i].IsVMerge == false && rowCell[i].HMerge == 0 {
+				c := row.AddCell()
+				run := c.AddParagraph().AddRun()
+				run.AddText(rowCell[i].Value)
+				i++
+			} else if rowCell[i].IsVMergeStart == true && rowCell[i].IsVMerge == true { // 有竖向合并,并且是开头
+				if rowCell[i].HMerge > 1 { //有横向合并
+					c := row.AddCell()
+					c.Properties().SetColumnSpan(rowCell[i].HMerge)
+					c.Properties().SetVerticalMerge(wml.ST_MergeRestart)
+					run := c.AddParagraph().AddRun()
+					run.AddText(rowCell[i].Value)
+					i += rowCell[i].HMerge
+				} else { // 没有横向合并
+					c := row.AddCell()
+					c.Properties().SetVerticalMerge(wml.ST_MergeRestart)
+					run := c.AddParagraph().AddRun()
+					run.AddText(rowCell[i].Value)
+					i++
+				}
+			} else if rowCell[i].IsVMergeStart == false && rowCell[i].IsVMerge == true { // 有竖向合并，不是开头
+				if rowCell[i].HMerge > 1 { //有横向合并
+					c := row.AddCell()
+					c.Properties().SetColumnSpan(rowCell[i].HMerge)
+					c.Properties().SetVerticalMerge(wml.ST_MergeContinue)
+					run := c.AddParagraph().AddRun()
+					run.AddText(rowCell[i].Value)
+					i += rowCell[i].HMerge
+				} else { // 没有横向合并
+					c := row.AddCell()
+					c.Properties().SetVerticalMerge(wml.ST_MergeContinue)
+					run := c.AddParagraph().AddRun()
+					run.AddText(rowCell[i].Value)
+					i++
+				}
+			} else {
+				c := row.AddCell()
+				c.Properties().SetColumnSpan(rowCell[i].HMerge)
+				run := c.AddParagraph().AddRun()
+				run.AddText(rowCell[i].Value)
+				i += rowCell[i].HMerge
 			}
 		}
-		count++
 	}
-	return count
 }

@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	sourcePath := "htmltestset/多种合并方式的表格1.html"
+	sourcePath := "htmltestset/多种合并方式的表格2.html"
 	targetPath := "test.docx"
 	tmpHTMLPath := "htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
@@ -217,6 +217,8 @@ func parseTableBody(s *goquery.Selection) (tableCells [][]*model.TableCell) {
 
 	// 先测试一下看看格子占用情况是否正确
 	utils.SetUsedCellsInVTable(s, vTable)
+
+	wordstyle.SetTable(vTable)
 
 	return
 }
