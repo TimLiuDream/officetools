@@ -2,12 +2,11 @@ package model
 
 // TableCell 表格格子
 type TableCell struct {
-	//RowIndex int // 行索引
-	ColIndex int // 列索引
-	//VMerge   int // 行合并数（竖向合并数）
-	IsVMerge bool // 是否是竖向合并
-	HMerge   int  // 列合并数（横向合并数）
-	Value    string
+	RowIndex int    // 行索引
+	ColIndex int    // 列索引
+	IsVMerge bool   // 是否是竖向合并
+	HMerge   int    // 列合并数（横向合并数）
+	Value    string // 格子的值
 }
 
 // TableRowTitle 表格行标题
