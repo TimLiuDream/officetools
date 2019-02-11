@@ -1,4 +1,4 @@
-package style
+package wordstyle
 
 import (
 	"baliance.com/gooxml/color"
