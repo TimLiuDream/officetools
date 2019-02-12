@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	sourcePath := "./html2word/htmltestset/无序和有序列表.html"
+	sourcePath := "./html2word/htmltestset/无序和有序列表1.html"
 	targetPath := "./html2word/test.docx"
 	tmpHTMLPath := "./html2word/htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
@@ -132,10 +132,10 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 			parseTable(s)
 		} else if tag == "ul" { // 无序列表
 			is := parseNotSortList(s)
-			wordstyle.SetNotSortList(is)
+			wordstyle.SetNotSortList(is, 0)
 		} else if tag == "ol" { // 有序列表
 			is := parseSortList(s)
-			wordstyle.SetSortList(is)
+			wordstyle.SetSortList(is, 0)
 		}
 	}
 }
