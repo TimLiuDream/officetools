@@ -10,3 +10,6 @@
 - xlsx2:创建excel的例子
 - xlsx3:分解合并单元格的例子
 - xlsx4:分解合并单元格的例子
+- createwordtable:创建word表格的例子
+- doc_properties:获取一个word文档的属性例子
+- toc:创建含有有序列表和无序列表的word
