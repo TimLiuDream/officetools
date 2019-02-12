@@ -21,3 +21,15 @@ type TableColTitle struct {
 	RowIndex int    //行索引
 	Title    string //标题
 }
+
+// NotSortList 无序列表
+type NotSortItem struct {
+	Value           string
+	NotSortItemList []*NotSortItem
+}
+
+// SortList 有序列表
+type SortItem struct {
+	Value        string
+	SortItemList []*SortItem
+}

@@ -11,11 +11,11 @@ import (
 func main() {
 	doc := document.New()
 	// 无序列表
-	notSortList(doc, "notsortlist.docx")
+	notSortList(doc, "./toc/notsortlist.docx")
 
 	doc1 := document.New()
 	// 有序列表
-	sortList(doc1, "sortlist.docx")
+	sortList(doc1, "./toc/sortlist.docx")
 }
 
 // notSortList 创建无序列表
@@ -36,22 +36,22 @@ func notSortList(doc *document.Document, path string) {
 
 // sortList 有序列表
 func sortList(doc *document.Document, path string) {
-	nd:=doc.Numbering.AddDefinition()
+	nd := doc.Numbering.AddDefinition()
 	nd.SetMultiLevelType(wml.ST_MultiLevelTypeHybridMultilevel)
 	// 新建列表系列
 	for i := 1; i < 10; i++ {
 		lvl := nd.AddLevel()
 		lvl.SetFormat(wml.ST_NumberFormatCustom)
 		lvl.SetAlignment(wml.ST_JcLeft)
-		txt:=fmt.Sprintf("%%%d.",i)
+		txt := fmt.Sprintf("%%%d.", i)
 		lvl.SetText(txt)
-		if i%2==0{
-			lvl.SetFormat(wml.ST_NumberFormatLowerLetter)
-			txt = fmt.Sprintf("%%%d)",i)
+		if i%2 == 0 {
+			lvl.SetFormat(wml.ST_NumberFormatCustom)
+			txt = fmt.Sprintf("%%%d.", i)
 			lvl.SetText(txt)
-		}else if i%3==0{
-			lvl.SetFormat(wml.ST_NumberFormatLowerRoman)
-			txt=fmt.Sprintf("%%%d.",i)
+		} else if i%3 == 0 {
+			lvl.SetFormat(wml.ST_NumberFormatCustom)
+			txt = fmt.Sprintf("%%%d.", i)
 			lvl.SetText(txt)
 		}
 		lvl.Properties().SetLeftIndent(0.5 * measurement.Distance(i) * measurement.Inch)

@@ -16,9 +16,9 @@ import (
 )
 
 func main() {
-	sourcePath := "htmltestset/多种合并方式的表格2.html"
-	targetPath := "test.docx"
-	tmpHTMLPath := "htmltmp/tmp.html"
+	sourcePath := "./html2word/htmltestset/无序和有序列表.html"
+	targetPath := "./html2word/test.docx"
+	tmpHTMLPath := "./html2word/htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
 	if err != nil {
 		log.Fatalln(err)
@@ -130,11 +130,12 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 			}
 		} else if tag == "table" {
 			parseTable(s)
-			//err := style.SetTable(rowCount, colCount, cellMap, cells)
-			//if err != nil {
-			//	log.Fatalln(err)
-			//	return
-			//}
+		} else if tag == "ul" { // 无序列表
+			is := parseNotSortList(s)
+			wordstyle.SetNotSortList(is)
+		} else if tag == "ol" { // 有序列表
+			is := parseSortList(s)
+			wordstyle.SetSortList(is)
 		}
 	}
 }
@@ -221,4 +222,34 @@ func parseTableBody(s *goquery.Selection) (tableCells [][]*model.TableCell) {
 	wordstyle.SetTable(vTable)
 
 	return
+}
+
+func parseNotSortList(s *goquery.Selection) []*model.NotSortItem {
+	level := s.Children()
+	levelList := make([]*model.NotSortItem, 0)
+	for _, node := range level.Nodes {
+		item := &model.NotSortItem{Value: strings.TrimRight(strings.Replace(node.FirstChild.Data, "\n", "", -1), " "), NotSortItemList: make([]*model.NotSortItem, 0)}
+		levelList = append(levelList, item)
+	}
+	level.Each(func(i int, selection *goquery.Selection) {
+		l := selection.Children()
+		is := parseNotSortList(l)
+		levelList[i].NotSortItemList = append(levelList[i].NotSortItemList, is...)
+	})
+	return levelList
+}
+
+func parseSortList(s *goquery.Selection) []*model.SortItem {
+	level := s.Children()
+	levelList := make([]*model.SortItem, 0)
+	for _, node := range level.Nodes {
+		item := &model.SortItem{Value: strings.TrimRight(strings.Replace(node.FirstChild.Data, "\n", "", -1), " "), SortItemList: make([]*model.SortItem, 0)}
+		levelList = append(levelList, item)
+	}
+	level.Each(func(i int, selection *goquery.Selection) {
+		l := selection.Children()
+		is := parseSortList(l)
+		levelList[i].SortItemList = append(levelList[i].SortItemList, is...)
+	})
+	return levelList
 }

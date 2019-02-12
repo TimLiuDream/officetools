@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	doc, err := document.Open("document.docx")
+	doc, err := document.Open("./doc_properties/document.docx")
 	if err != nil {
 		log.Fatalf("error opening document: %s", err)
 	}
@@ -33,5 +33,5 @@ func main() {
 	cp.SetLastModifiedBy("Jane Smith")
 	cp.SetCreated(time.Now())
 	cp.SetModified(time.Now())
-	doc.SaveToFile("document.docx")
+	doc.SaveToFile("./doc_properties/document.docx")
 }
