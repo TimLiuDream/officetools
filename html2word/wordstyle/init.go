@@ -18,4 +18,12 @@ const (
 
 	CodeBackGround     string = "#dfe3e7"
 	HyperLinkFontColor string = "#0563C1"
+
+	ImgSizeSmall  string = "small"
+	ImgSizeMedium string = "medium"
+	ImgSizeLarge  string = "large"
+
+	ImgSizeProportionSmall  float64 = 0.3
+	ImgSizeProportionMedium float64 = 0.6
+	ImgSizeProportionLarge  float64 = 1
 )

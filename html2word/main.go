@@ -16,7 +16,7 @@ import (
 )
 
 func main() {
-	sourcePath := "./html2word/htmltestset/无序和有序列表1.html"
+	sourcePath := "./html2word/htmltestset/普通测试文件.html"
 	targetPath := "./html2word/test.docx"
 	tmpHTMLPath := "./html2word/htmltmp/tmp.html"
 	file, err := os.Open(sourcePath)
@@ -142,6 +142,7 @@ func parseElement(node *html.Node, s *goquery.Selection) {
 
 func parseImg(node *html.Node) {
 	if node.FirstChild != nil {
+		size := getImgSize(node)
 		c := node.FirstChild.NextSibling.FirstChild
 		attr := c.Attr[1]
 		base64Str := strings.Replace(attr.Val, "\n", "", -1)
@@ -151,12 +152,22 @@ func parseImg(node *html.Node) {
 			return
 		}
 		imgPath := utils.Base2img(base64Str)
-		err = wordstyle.SetImage(imgPath)
+		err = wordstyle.SetImage(imgPath, size)
 		if err != nil {
 			log.Fatalln(err)
 			return
 		}
 	}
+}
+
+func getImgSize(node *html.Node) string {
+	size := ""
+	for _, attr := range node.Attr {
+		if attr.Key == "data-size" {
+			size = attr.Val
+		}
+	}
+	return size
 }
 
 func parseTable(s *goquery.Selection) {
@@ -165,10 +176,8 @@ func parseTable(s *goquery.Selection) {
 
 	// 取列标题
 	colTitles := parseTableColTitle(s)
-	fmt.Println(rowTitles)
-	fmt.Println(colTitles)
 
-	parseTableBody(s)
+	parseTableBody(s, rowTitles, colTitles)
 	return
 }
 
@@ -206,7 +215,7 @@ func parseTableColTitle(s *goquery.Selection) (colTitles []*model.TableColTitle)
 	return
 }
 
-func parseTableBody(s *goquery.Selection) (tableCells [][]*model.TableCell) {
+func parseTableBody(s *goquery.Selection, rowTitles []*model.TableRowTitle, colTitles []*model.TableColTitle) {
 	// 计算表格的行列数
 	rowCount, colCount := utils.CalTableRowColCount(s)
 
@@ -214,14 +223,44 @@ func parseTableBody(s *goquery.Selection) (tableCells [][]*model.TableCell) {
 	vTable := utils.BuildVirtualTable(rowCount, colCount)
 	fmt.Println(vTable)
 
-	tableCells = make([][]*model.TableCell, 0)
-
 	// 先测试一下看看格子占用情况是否正确
 	utils.SetUsedCellsInVTable(s, vTable)
 
-	wordstyle.SetTable(vTable)
+	if len(colTitles) > 0 {
+		for rowIndex, row := range vTable {
+			colTitleCells := make([]*model.TableCell, 0)
+			cell := &model.TableCell{
+				RowIndex:      rowIndex,
+				ColIndex:      0,
+				IsVMerge:      false,
+				IsVMergeStart: false,
+				HMerge:        0,
+				Value:         colTitles[rowIndex].Title,
+			}
+			colTitleCells = append(colTitleCells, cell)
+			row = append(colTitleCells, row...)
+			vTable[rowIndex] = row
+		}
+	}
+	if len(rowTitles) > 0 {
+		t := make([][]*model.TableCell, 0)
+		rowTitleCells := make([]*model.TableCell, 0)
+		for colIndex, title := range rowTitles {
+			cell := &model.TableCell{
+				RowIndex:      0,
+				ColIndex:      colIndex,
+				IsVMerge:      false,
+				IsVMergeStart: false,
+				HMerge:        0,
+				Value:         title.Title,
+			}
+			rowTitleCells = append(rowTitleCells, cell)
+		}
+		t = append(t, rowTitleCells)
+		vTable = append(t, vTable...)
+	}
 
-	return
+	wordstyle.SetTable(vTable)
 }
 
 func parseNotSortList(s *goquery.Selection) []*model.NotSortItem {

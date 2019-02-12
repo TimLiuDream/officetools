@@ -42,6 +42,7 @@ func SetSortList(list []*model.SortItem, level int) {
 	}
 }
 
+// setSortListCode 创建有序列表的编码
 func setSortListCode() (nd document.NumberingDefinition) {
 	nd = Doc.Numbering.AddDefinition()
 	nd.SetMultiLevelType(wml.ST_MultiLevelTypeHybridMultilevel)

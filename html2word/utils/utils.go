@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/PuerkitoBio/goquery"
@@ -76,44 +75,3 @@ func ConvertMarkdownToHTML(input string) (string, error) {
 	html, _ := doc.Html()
 	return html, nil
 }
-
-// GetCellKey 根据行列索引给出对应的cellMap的key
-func GetCellKey(rowIndex, colIndex int) string {
-	return strconv.Itoa(rowIndex) + "," + strconv.Itoa(colIndex)
-}
-
-// GetRowColByCellKey 将cellMap的key分解成行列索引
-func GetRowColByCellKey(cellKey string) (row, col int) {
-	rowColCouple := strings.Split(cellKey, ",")
-	rowStr := rowColCouple[0]
-	colStr := rowColCouple[1]
-	row, err := strconv.Atoi(rowStr)
-	if err != nil {
-		log.Fatalln(err)
-		return
-	}
-	col, err = strconv.Atoi(colStr)
-	if err != nil {
-		log.Fatalln(err)
-		return
-	}
-	return
-}
-
-// IsCellInMergeCellScope 判断单元格是不是在合并的map中已经包含了
-//func IsCellInMergeCellScope(cellKey string, tableCellMap map[string]*model.TableCell) (result bool) {
-//	for key, value := range tableCellMap {
-//		row, col := GetRowColByCellKey(key)
-//		rowStart := row
-//		rowEnd := row + value.VMerge
-//		colStart := col
-//		colEnd := col + value.HMerge
-//
-//		cellRow, cellCol := GetRowColByCellKey(cellKey)
-//		if cellRow >= rowStart && cellRow <= rowEnd && cellCol >= colStart && cellCol <= colEnd {
-//			result = true
-//			return
-//		}
-//	}
-//	return
-//}
