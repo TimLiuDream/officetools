@@ -8,9 +8,8 @@ import (
 )
 
 var (
-	inFile  = "/Users/chain/Downloads/student1.xlsx"
-	outFile = "/Users/tim/Downloads/out_student.xlsx"
-	// outFile = "F:\\out_student.xlsx"
+	inFile  = "./xlsx/student1.xlsx"
+	outFile = "./xlsx/out_student.xlsx"
 )
 
 type Student struct {

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"regexp"
 	"strings"
 
@@ -24,9 +23,6 @@ func Base2img(base64Str string) (imgPath string) {
 		return
 	}
 	imgPath = fmt.Sprintf("./html2word/image/%s", UUID.String()+".jpg")
-	defer func() {
-		os.Remove(imgPath)
-	}()
 	ddd, _ := base64.RawStdEncoding.DecodeString(base64Str)
 	err = ioutil.WriteFile(imgPath, ddd, 0666)
 	if err != nil {
