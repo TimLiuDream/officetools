@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	doc, err := document.Open("./doc_properties/document.docx")
+	doc, err := document.Open("/Users/tim/go/src/github.com/timliudream/officetools/doc_properties/背景色.docx")
 	if err != nil {
 		log.Fatalf("error opening document: %s", err)
 	}
