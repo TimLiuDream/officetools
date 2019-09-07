@@ -9,16 +9,18 @@ import (
 // 让单元格的字体有黑色和红色
 func main() {
 	col := "用例名称"
-	required := "*"
 
 	style := xlsx.NewStyle()
-	font := xlsx.NewFont(12, "DengXian")
+	font := *xlsx.NewFont(12, "DengXian")
 	font.Family = 2
 	font.Charset = 134
-	font.Color = "FF000000"
+	font.Color = "#ff0000"
 	font.Bold = false
 	font.Italic = false
 	font.Underline = false
+	style.Font = font
+	style.ApplyFont = true
+
 	file := xlsx.NewFile()
 	sheet, err := file.AddSheet("sheet1")
 	if err != nil {
@@ -27,8 +29,8 @@ func main() {
 
 	headRow := sheet.AddRow()
 	cell := headRow.AddCell()
+	cell.Value = col
 	cell.SetStyle(style)
-	cell.Value = col + required
 	err = file.Save("/Users/tim/go/src/github.com/timliudream/officetools/xlsx5/test.xlsx")
 	if err != nil {
 		log.Fatalln(err)
