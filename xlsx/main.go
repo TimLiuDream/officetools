@@ -64,10 +64,7 @@ func Export() {
 		mailCell.Value = stu.Mail
 		mailCell.SetStyle(style)
 	}
-	err = sheet.SetColWidth(0, len(sheet.Cols)-1, 20)
-	if err != nil {
-		fmt.Printf(err.Error())
-	}
+	sheet.SetColWidth(0, sheet.Cols.Len-1, 20)
 	err = file.Save(outFile)
 	if err != nil {
 		fmt.Printf(err.Error())

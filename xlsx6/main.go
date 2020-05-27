@@ -34,10 +34,10 @@ func main() {
 	}
 	sheet := xlFile.Sheets[0]
 	for rIndex, _ := range sheet.Rows {
-		for cIndex, _ := range sheet.Cols {
-			cell := sheet.Cell(rIndex, cIndex)
+		sheet.Cols.ForEach(func(idx int, col *xlsx.Col) {
+			cell := sheet.Cell(rIndex, idx)
 			cell.SetStyle(style)
-		}
+		})
 	}
 
 	cell := sheet.Cell(5, 5)

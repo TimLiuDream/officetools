@@ -9,6 +9,10 @@ import (
 )
 
 func main() {
+	func2()
+}
+
+func func1() {
 	path := "/Users/tim/go/src/github.com/timliudream/GolangTraining/xlsx3/xlsx3test.xlsx"
 
 	xlFile, err := xlsx.OpenFile(path)
@@ -55,6 +59,25 @@ func main() {
 
 					fmt.Printf("行：%d,列：%d，值:%s\n", rowIndex+1, cellIndex+1, text)
 				}
+			}
+		}
+	}
+}
+
+func func2() {
+	fmt.Println("sdf")
+	path := "/Users/tim/Downloads/模板.xls"
+
+	xlFile, err := xlsx.OpenFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("sdf1")
+	for _, sheet := range xlFile.Sheets {
+		for rowIndex, row := range sheet.Rows {
+			for cellIndex, cell := range row.Cells {
+				text := cell.Value
+				fmt.Printf("行：%d,列：%d，值:%s\n", rowIndex+1, cellIndex+1, text)
 			}
 		}
 	}
